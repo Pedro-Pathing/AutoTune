@@ -1,0 +1,302 @@
+package com.pedropathing.tuning.autotune;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+
+public final class TuningSession {
+    private static final Object sessionLock = new Object();
+    private static TuningSession currentSession;
+
+    private final Object requestLock = new Object();
+    private final Procedure procedure;
+    private final Transport client;
+    private final Thread thread;
+
+    private boolean abortRequested;
+    private long nextRequestId;
+    private PendingRequest activeRequest;
+    private long activeOpModeRequestId;
+    private TuningOpMode<?> activeOpMode;
+
+    private TuningSession(Procedure procedure, Transport client) {
+        this.procedure = procedure;
+        this.client = client;
+        thread = new Thread(this::execute, "Pedro-Tuning");
+    }
+
+    static TuningSession beginProcedure(String id, Transport client) {
+        Procedure procedure = TunerRegistrar.getProcedure(id);
+        if (procedure == null) return null;
+
+        TuningSession session = new TuningSession(procedure, client);
+        synchronized (sessionLock) {
+            if (currentSession != null) return null;
+
+            currentSession = session;
+            try {
+                session.thread.start();
+            } catch (RuntimeException | Error exception) {
+                currentSession = null;
+                throw exception;
+            }
+        }
+        return session;
+    }
+
+    static void abort() {
+        TuningSession session;
+        synchronized (sessionLock) {
+            session = currentSession;
+        }
+        abort(session);
+    }
+
+    static void abort(TuningSession session) {
+        if (session == null) return;
+
+        synchronized (sessionLock) {
+            if (currentSession != session) return;
+            session.abortRequested = true;
+        }
+        session.thread.interrupt();
+    }
+
+    static void requestConfirmation(String title, String message) throws InterruptedException {
+        requireCurrentSession().awaitConfirmation(title, message);
+    }
+
+    static void requestInputs(Inputs inputs) throws InterruptedException {
+        requireCurrentSession().awaitInputs(inputs);
+    }
+
+    static void opModeStarted(TuningOpMode<?> opMode) throws InterruptedException {
+        requireCurrentSession().beginOpMode(opMode);
+    }
+
+    static void opModeFinished(TuningOpMode<?> opMode) {
+        TuningSession session;
+        synchronized (sessionLock) {
+            session = currentSession;
+        }
+        if (session != null) session.endOpMode(opMode);
+    }
+
+    private static TuningSession requireCurrentSession() {
+        synchronized (sessionLock) {
+            if (currentSession == null) {
+                throw new IllegalStateException("No tuning session is running.");
+            }
+            return currentSession;
+        }
+    }
+
+    private void execute() {
+        try {
+            runProcedure();
+        } finally {
+            synchronized (sessionLock) {
+                if (currentSession == this) currentSession = null;
+            }
+        }
+    }
+
+    private void runProcedure() {
+        try {
+            requestConfirmation(
+                    "Important",
+                    "You are now entering tuning mode. Exiting this tab, unfocusing the window, " +
+                            "exiting fullscreen mode, or running a non-tuning OpMode from the driver " +
+                            "station will stop the tuning process. Pressing SPACEBAR or the E-STOP " +
+                            "(emergency stop) button in the top-right corner will also stop the tuning process."
+            );
+            procedure.execute();
+            sendWhileRunning(() -> client.complete(procedure.resultSnapshot()));
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            client.error("The tuner ended before it completed.");
+        } catch (IOException | RuntimeException | Error exception) {
+            reportFailure(exception);
+        }
+    }
+
+    boolean confirm(long requestId) {
+        PendingRequest request;
+        synchronized (requestLock) {
+            request = activeRequest;
+            if (!matches(request, RequestType.CONFIRMATION, requestId)) return false;
+            activeRequest = null;
+        }
+        request.complete();
+        return true;
+    }
+
+    void submitInputs(long requestId, Map<String, Object> values) {
+        PendingRequest request;
+        synchronized (requestLock) {
+            request = activeRequest;
+            if (!matches(request, RequestType.INPUTS, requestId) || request.inputs == null) {
+                throw new IllegalArgumentException(
+                        "The submitted inputs are for a step that is no longer active."
+                );
+            }
+
+            request.inputs.setValues(values);
+            activeRequest = null;
+        }
+        request.complete();
+    }
+
+    private void awaitConfirmation(String title, String message) throws InterruptedException {
+        awaitRequest(
+                RequestType.CONFIRMATION,
+                null,
+                requestId -> client.requestConfirmation(requestId, title, message)
+        );
+    }
+
+    private void awaitInputs(Inputs inputs) throws InterruptedException {
+        awaitRequest(
+                RequestType.INPUTS,
+                inputs,
+                requestId -> client.requestInputs(requestId, inputs)
+        );
+    }
+
+    private void beginOpMode(TuningOpMode<?> opMode) throws InterruptedException {
+        long requestId;
+        synchronized (requestLock) {
+            if (activeOpMode != null) {
+                throw new IllegalStateException("Another tuning OpMode is already running.");
+            }
+            requestId = ++nextRequestId;
+            activeOpModeRequestId = requestId;
+            activeOpMode = opMode;
+        }
+
+        try {
+            sendWhileRunning(() -> client.opModeRunning(requestId, opMode.canStop, opMode.name));
+        } catch (IOException exception) {
+            abort(this);
+            throw new InterruptedException();
+        }
+    }
+
+    private void endOpMode(TuningOpMode<?> opMode) {
+        synchronized (requestLock) {
+            if (activeOpMode == opMode) {
+                activeOpMode = null;
+                activeOpModeRequestId = 0;
+            }
+        }
+    }
+
+    void stopOpMode(long requestId) {
+        synchronized (requestLock) {
+            if (activeOpMode != null && activeOpModeRequestId == requestId) {
+                activeOpMode.requestGracefulStop();
+            }
+        }
+    }
+
+    private void awaitRequest(RequestType type, Inputs inputs, RequestSender sender)
+            throws InterruptedException {
+        PendingRequest request;
+        synchronized (requestLock) {
+            request = new PendingRequest(++nextRequestId, type, inputs);
+            activeRequest = request;
+            try {
+                sendWhileRunning(() -> sender.send(request.id));
+            } catch (IOException exception) {
+                clearRequest(request);
+                abort(this);
+                throw new InterruptedException();
+            } catch (InterruptedException | RuntimeException | Error exception) {
+                clearRequest(request);
+                throw exception;
+            }
+        }
+
+        try {
+            request.await();
+        } finally {
+            synchronized (requestLock) {
+                clearRequest(request);
+            }
+        }
+    }
+
+    private void clearRequest(PendingRequest request) {
+        if (activeRequest == request) activeRequest = null;
+    }
+
+    private static boolean matches(PendingRequest request, RequestType type, long requestId) {
+        return request != null &&
+                request.type == type &&
+                (requestId == 0 || request.id == requestId);
+    }
+
+    private void sendWhileRunning(IoAction action) throws IOException, InterruptedException {
+        synchronized (sessionLock) {
+            if (currentSession != this || abortRequested || Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException();
+            }
+            action.run();
+        }
+    }
+
+    private void reportFailure(Throwable failure) {
+        failure.printStackTrace();
+        String detail = failure.getMessage();
+        if (detail == null || detail.trim().isEmpty()) {
+            detail = failure.getClass().getSimpleName();
+        }
+        client.error("The backend stopped the tuning procedure: " + detail);
+    }
+
+    private enum RequestType {
+        CONFIRMATION,
+        INPUTS
+    }
+
+    interface Transport {
+        void requestConfirmation(long requestId, String title, String message) throws IOException;
+
+        void requestInputs(long requestId, Inputs inputs) throws IOException;
+
+        void opModeRunning(long requestId, boolean canStop, String name) throws IOException;
+
+        void complete(Map<String, String> results) throws IOException;
+
+        void error(String message);
+    }
+
+    private interface IoAction {
+        void run() throws IOException;
+    }
+
+    private interface RequestSender {
+        void send(long requestId) throws IOException;
+    }
+
+    private static final class PendingRequest {
+        final long id;
+        final RequestType type;
+        final Inputs inputs;
+        private final CountDownLatch response = new CountDownLatch(1);
+
+        PendingRequest(long id, RequestType type, Inputs inputs) {
+            this.id = id;
+            this.type = type;
+            this.inputs = inputs;
+        }
+
+        void await() throws InterruptedException {
+            response.await();
+        }
+
+        void complete() {
+            response.countDown();
+        }
+    }
+}

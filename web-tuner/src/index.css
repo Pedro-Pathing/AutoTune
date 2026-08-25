@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --color-primary: #fe52a0;
+    --color-danger: #e60026;
+    --color-accent-foreground: #fafafa;
+}
+
+:root {
+    --base: #fafafa;
+    --border: #99999933;
+    --body: #737373;
+    --heading: #030303;
+    --gradient-base:
+        radial-gradient(60% 40% at 50% 0, --alpha(var(--color-primary) / 5.9%), #00000000),
+        radial-gradient(40% 30% at 80%, --alpha(var(--color-primary) / 3.1%), #00000000);
+}
+
+.dark {
+    --base: #0f0f14;
+    --border: #80808033;
+    --body: #999999;
+    --heading: #fafafa;
+    --gradient-base:
+        radial-gradient(
+            ellipse 60% 40% at 50% 0%,
+            --alpha(var(--color-primary) / 7.8%),
+            transparent
+        ),
+        radial-gradient(
+            ellipse 40% 30% at 80% 50%,
+            --alpha(var(--color-primary) / 4%),
+            transparent
+        ),
+        radial-gradient(ellipse 40% 30% at 10% 60%, --alpha(var(--color-primary) / 3%), transparent);
+}
+
+@theme inline {
+    --color-base: var(--base);
+    --color-border: var(--border);
+    --color-body: var(--body);
+    --color-heading: var(--heading);
+}
+
+.scrollbar-minimal {
+    &::-webkit-scrollbar {
+        @apply w-2.5;
+    }
+
+    &::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        @apply bg-body/25 rounded-full;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        @apply bg-body/40;
+    }
+
+    &::-webkit-scrollbar-button {
+        @apply hidden;
+    }
+}
