@@ -64,7 +64,7 @@ deployer {
         description = "An automatic tuning system for Pedro Pathing"
         url = "https://pedropathing.com"
         scm {
-            fromGithub("Pedro-Pathing", "PedroPathing")
+            fromGithub("Pedro-Pathing", "AutoTune")
         }
         license("BSD 3-Clause License", "https://opensource.org/licenses/BSD-3-Clause")
 
