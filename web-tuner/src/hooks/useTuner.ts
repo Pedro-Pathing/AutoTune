@@ -18,7 +18,7 @@ type State =
           stopRequested: boolean;
           name: string;
       }
-    | { type: "complete"; results: Record<string, string> }
+    | { type: "complete"; results: Record<string, string>; resultCode: Record<string, string> }
     | { type: "error"; message: string };
 
 export type AbortHandler = (message: string) => void;
@@ -47,27 +47,16 @@ function messageToState(message: TunerMessage): State {
                 name: message.name
             };
         case "complete":
-            return { type: "complete", results: message.results };
+            return { type: "complete", results: message.results, resultCode: message.resultCode };
     }
 }
 
-export function useTuner(id: string | undefined, enabled: boolean) {
+export function useTuner(id: string | undefined) {
     const [state, setState] = useState<State>({ type: "loading" });
     const connectionRef = useRef<TuningConnection | null>(null);
-    const previousIdRef = useRef(id);
-    const startedRef = useRef(false);
-    const terminalRef = useRef(false);
 
     useEffect(() => {
-        if (previousIdRef.current !== id) {
-            previousIdRef.current = id;
-            startedRef.current = false;
-            terminalRef.current = false;
-            setState({ type: "loading" });
-        }
-
         if (id === undefined || id.length === 0) {
-            terminalRef.current = true;
             setState({
                 type: "error",
                 message: "No tuner was selected. Return to the tuner list and try again."
@@ -75,15 +64,6 @@ export function useTuner(id: string | undefined, enabled: boolean) {
             return;
         }
 
-        if (!enabled || document.fullscreenElement === null) {
-            if (!terminalRef.current) startedRef.current = false;
-            return;
-        }
-
-        if (startedRef.current) return;
-
-        startedRef.current = true;
-        terminalRef.current = false;
         setState({ type: "loading" });
 
         let connection: TuningConnection;
@@ -93,17 +73,14 @@ export function useTuner(id: string | undefined, enabled: boolean) {
                 id,
                 (message) => {
                     const nextState = messageToState(message);
-                    if (nextState.type === "complete") terminalRef.current = true;
                     setState(nextState);
                 },
                 (failure: ConnectionFailure) => {
-                    terminalRef.current = true;
                     setState({ type: "error", ...failure });
                 }
             );
         } catch (error) {
             console.error("Failed to create WebSocket:", error);
-            terminalRef.current = true;
             setState({
                 type: "error",
                 message: "The browser could not open a connection to the tuning server."
@@ -116,13 +93,12 @@ export function useTuner(id: string | undefined, enabled: boolean) {
             connection.dispose();
             if (connectionRef.current === connection) connectionRef.current = null;
         };
-    }, [id, enabled]);
+    }, [id]);
 
     function sendMessage(message: Record<string, unknown>) {
         const connection = connectionRef.current;
         if (connection !== null) return connection.send(message);
 
-        terminalRef.current = true;
         setState({
             type: "error",
             message: "The browser was disconnected from the tuning server."
@@ -161,7 +137,6 @@ export function useTuner(id: string | undefined, enabled: boolean) {
 
     const abort = useCallback((message: string) => {
         connectionRef.current?.abort(message);
-        terminalRef.current = true;
         setState({ type: "error", message });
     }, []);
 

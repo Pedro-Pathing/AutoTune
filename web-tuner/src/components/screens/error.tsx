@@ -1,13 +1,11 @@
 import { ArrowLeft, CircleAlert, RotateCcw } from "lucide-react";
+import { Link } from "react-router";
 
 export default function ErrorScreen({ message }: { message: string }) {
     return (
         <main className="flex grow items-center justify-center p-8">
-            <div
-                className="border-border bg-base/70 flex w-full max-w-xl flex-col items-center gap-5 rounded-3xl border p-10 text-center shadow-sm"
-                role="alert"
-            >
-                <CircleAlert aria-hidden="true" className="text-danger/50 size-12" />
+            <div className="border-border bg-base/70 flex w-full max-w-xl flex-col items-center gap-5 rounded-3xl border p-10 text-center shadow-sm">
+                <CircleAlert className="text-danger/50 size-12" />
                 <h2 className="text-heading text-4xl font-bold">Something went wrong.</h2>
                 <p className="text-body max-w-[60ch] wrap-break-word whitespace-pre-wrap">
                     {message}
@@ -21,13 +19,13 @@ export default function ErrorScreen({ message }: { message: string }) {
                         <RotateCcw className="size-4" />
                         Try again
                     </button>
-                    <a
+                    <Link
                         className="text-primary hover:border-primary flex items-center gap-2 rounded-full border border-transparent p-3 font-medium transition-colors"
-                        href="/"
+                        to="/"
                     >
                         <ArrowLeft className="size-4" />
                         Choose another tuner
-                    </a>
+                    </Link>
                 </div>
             </div>
         </main>

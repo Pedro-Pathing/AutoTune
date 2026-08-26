@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static com.aventrix.jnanoid.jnanoid.NanoIdUtils.randomNanoId;
+import static com.pedropathing.tuning.autotune.Utils.nanoid;
 
 public class TunerRegistrar {
     private static final List<RegisteredProcedure> procedures = new ArrayList<>();
@@ -42,7 +42,7 @@ public class TunerRegistrar {
         public RegisteredProcedure(String name, Procedure procedure) {
             this.name = name;
             this.procedure = procedure;
-            id = randomNanoId();
+            id = nanoid();
         }
     }
 }

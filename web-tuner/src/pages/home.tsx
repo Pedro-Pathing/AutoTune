@@ -4,6 +4,7 @@ import { Link } from "react-router";
 
 import logoDark from "../assets/autotune-stacked-black.svg";
 import logoLight from "../assets/autotune-stacked-white.svg";
+import CursorDuck from "../components/CursorDuck";
 import Loading from "../components/screens/loading";
 import { useTheme } from "../lib/theme";
 
@@ -49,6 +50,8 @@ export default function Home() {
 
     return (
         <>
+            <CursorDuck />
+
             <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 className="fixed top-4 left-4 z-50 rounded-full border border-mauve-400/25 bg-neutral-300/50 p-2 text-black opacity-60 transition-opacity duration-300 hover:opacity-100 dark:bg-neutral-950/50 dark:text-white"
@@ -57,18 +60,8 @@ export default function Home() {
             </button>
 
             <div className="mx-auto mt-16 w-full max-w-xl">
-                <img
-                    src={logoLight}
-                    alt="Autotune Logo"
-                    draggable="false"
-                    className="dark:hidden"
-                />
-                <img
-                    src={logoDark}
-                    alt="Autotune Logo"
-                    draggable="false"
-                    className="hidden dark:block"
-                />
+                <img src={logoLight} draggable="false" className="dark:hidden" />
+                <img src={logoDark} draggable="false" className="hidden dark:block" />
             </div>
 
             <main className="grid grid-cols-3 gap-8 p-16">

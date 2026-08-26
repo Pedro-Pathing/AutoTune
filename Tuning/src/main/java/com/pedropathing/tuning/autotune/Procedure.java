@@ -1,7 +1,6 @@
 package com.pedropathing.tuning.autotune;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManagerImpl;
-
 import dev.frozenmilk.sinister.sdk.opmodes.SinisterRegisteredOpModes;
 import org.firstinspires.ftc.robotcore.internal.opmode.OpModeMeta;
 
@@ -13,6 +12,7 @@ public abstract class Procedure {
     public final String description;
 
     private final Map<String, String> results = new LinkedHashMap<>();
+    private final Map<Object, String> resultCode = new LinkedHashMap<>();
 
     public Procedure(String name, String description) {
         this.name = name;
@@ -23,6 +23,7 @@ public abstract class Procedure {
 
     final void execute() throws InterruptedException {
         results.clear();
+        resultCode.clear();
         run();
     }
 
@@ -41,12 +42,25 @@ public abstract class Procedure {
     protected final void result(String name, String value) {
         results.put(name, value);
     }
+
     protected final void result(String name, Object value) {
         result(name, value.toString());
     }
 
+    protected final void code(String language, String code) {
+        resultCode.put(language, code);
+    }
+
+    protected final void code(Language language, String code) {
+        resultCode.put(language, code);
+    }
+
     final Map<String, String> resultSnapshot() {
         return new LinkedHashMap<>(results);
+    }
+
+    final Map<Object, String> resultCodeSnapshot() {
+        return new LinkedHashMap<>(resultCode);
     }
 
     protected final <Result> Result runOpMode(TuningOpMode<Result> opMode) throws InterruptedException {
@@ -69,5 +83,11 @@ public abstract class Procedure {
             manager.requestOpModeStop(opMode);
             SinisterRegisteredOpModes.INSTANCE.unregister(meta);
         }
+    }
+
+    public enum Language {
+        JAVA,
+        KOTLIN,
+        JSON
     }
 }

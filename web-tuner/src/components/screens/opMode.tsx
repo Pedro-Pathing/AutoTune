@@ -18,12 +18,9 @@ export default function OpMode({ name, canStop, stopRequested, onStop }: Props) 
                         className="bg-primary text-accent-foreground focus-visible:ring-primary focus-visible:ring-offset-base mt-4 flex cursor-pointer items-center gap-2 rounded-full px-6 py-3 font-medium transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
                         type="button"
                         disabled={stopRequested}
-                        aria-busy={stopRequested}
                         onClick={onStop}
                     >
-                        {stopRequested && (
-                            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-                        )}
+                        {stopRequested && <LoaderCircle className="size-4 animate-spin" />}
                         {stopRequested ? "Stopping…" : "Stop OpMode"}
                     </button>
                 )}

@@ -1,12 +1,8 @@
 package com.pedropathing.tuning.autotune;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static com.aventrix.jnanoid.jnanoid.NanoIdUtils.randomNanoId;
+import static com.pedropathing.tuning.autotune.Utils.nanoid;
 
 public class Inputs {
     public final String name;
@@ -16,23 +12,6 @@ public class Inputs {
     public Inputs(String name, String description) {
         this.name = name;
         this.description = description;
-    }
-
-    void setValues(Map<String, Object> values) {
-        if (values == null) throw new IllegalArgumentException("Input values are missing.");
-
-        List<Object> converted = new ArrayList<>(fields.size());
-        for (Field<?> field : fields) {
-            Object value = values.get(field.id);
-            if (value == null) throw new IllegalArgumentException("Field '" + field.name + "' not set.");
-            Object convertedValue = convert(field, value);
-            validate(field, convertedValue);
-            converted.add(convertedValue);
-        }
-        // we do this in a separate step so that if a field is invalid, we throw before assigning some of the fields
-        for (int index = 0; index < fields.size(); index++) {
-            set(fields.get(index), converted.get(index));
-        }
     }
 
     private static Object convert(Field<?> field, Object value) {
@@ -75,8 +54,25 @@ public class Inputs {
         field.set((Value) value);
     }
 
-    public final Field<String> s(String name) {
-        Field<String> field = new Field<>(name, Type.STRING);
+    void setValues(Map<String, Object> values) {
+        if (values == null) throw new IllegalArgumentException("Input values are missing.");
+
+        List<Object> converted = new ArrayList<>(fields.size());
+        for (Field<?> field : fields) {
+            Object value = values.get(field.id);
+            if (value == null) throw new IllegalArgumentException("Field '" + field.name + "' not set.");
+            Object convertedValue = convert(field, value);
+            validate(field, convertedValue);
+            converted.add(convertedValue);
+        }
+        // we do this in a separate step so that if a field is invalid, we throw before assigning some of the fields
+        for (int index = 0; index < fields.size(); index++) {
+            set(fields.get(index), converted.get(index));
+        }
+    }
+
+    public final StringField s(String name) {
+        StringField field = new StringField(name);
         fields.add(field);
         return field;
     }
@@ -89,6 +85,7 @@ public class Inputs {
 
     public final Field<Boolean> b(String name) {
         Field<Boolean> field = new Field<>(name, Type.BOOLEAN);
+        field.withDefault(false);
         fields.add(field);
         return field;
     }
@@ -118,12 +115,11 @@ public class Inputs {
         public final String name;
         public final Type type;
         protected Value defaultValue;
-        private boolean required = true;
         private transient Value value;
         private transient boolean set;
 
         Field(String name, Type type) {
-            this.id = randomNanoId();
+            this.id = nanoid();
             this.name = name;
             this.type = type;
         }
@@ -133,18 +129,15 @@ public class Inputs {
                 throw new IllegalArgumentException("Default value cannot be null.");
             }
             this.defaultValue = defaultValue;
-            required = false;
             return this;
         }
 
-        public Field<Value> required() {
-            required = true;
+        public Field<Value> withoutDefault() {
+            if (type == Type.BOOLEAN) {
+                throw new IllegalStateException("Boolean fields must have a default value.");
+            }
             defaultValue = null;
             return this;
-        }
-
-        boolean isRequired() {
-            return required;
         }
 
         public Value get() {
@@ -162,6 +155,43 @@ public class Inputs {
             validate(value);
             this.set = true;
             this.value = value;
+        }
+    }
+
+    public static class StringField extends Field<String> {
+        private boolean allowEmpty;
+
+        StringField(String name) {
+            super(name, Type.STRING);
+        }
+
+        public StringField allowEmpty() {
+            allowEmpty = true;
+            return this;
+        }
+
+        boolean allowsEmpty() {
+            return allowEmpty;
+        }
+
+        @Override
+        public StringField withDefault(String defaultValue) {
+            super.withDefault(defaultValue);
+            return this;
+        }
+
+        @Override
+        public StringField withoutDefault() {
+            super.withoutDefault();
+            return this;
+        }
+
+        @Override
+        void validate(String value) {
+            super.validate(value);
+            if (!allowEmpty && value.isEmpty()) {
+                throw new IllegalArgumentException("Value for '" + name + "' cannot be empty.");
+            }
         }
     }
 
@@ -190,8 +220,8 @@ public class Inputs {
         }
 
         @Override
-        public NumberField<Value> required() {
-            super.required();
+        public NumberField<Value> withoutDefault() {
+            super.withoutDefault();
             return this;
         }
 

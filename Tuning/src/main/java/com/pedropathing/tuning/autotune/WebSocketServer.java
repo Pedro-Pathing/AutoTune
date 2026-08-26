@@ -42,7 +42,6 @@ public class WebSocketServer extends NanoWSD {
         json.addProperty("id", field.id);
         json.addProperty("name", field.name);
         json.addProperty("type", field.type.name());
-        json.addProperty("required", field.isRequired());
 
         if (field.defaultValue instanceof Enum<?>) {
             json.addProperty("defaultValue", ((Enum<?>) field.defaultValue).name());
@@ -50,19 +49,34 @@ public class WebSocketServer extends NanoWSD {
             json.add("defaultValue", context.serialize(field.defaultValue));
         }
 
-        if (field instanceof Inputs.NumberField<?>) {
+        if (field instanceof Inputs.StringField) {
+            json.addProperty("allowEmpty", ((Inputs.StringField) field).allowsEmpty());
+        } else if (field instanceof Inputs.NumberField<?>) {
             Inputs.NumberField<?> number = (Inputs.NumberField<?>) field;
             if (number.min != null) json.add("min", context.serialize(number.min));
             if (number.max != null) json.add("max", context.serialize(number.max));
         } else if (field instanceof Inputs.EnumField<?>) {
             JsonArray options = new JsonArray();
             for (Enum<?> option : ((Inputs.EnumField<?>) field).options) {
-                options.add(option.name());
+                JsonObject optionJson = new JsonObject();
+                optionJson.add("name", context.serialize(option.name()));
+                optionJson.add("displayName", context.serialize(getDisplayName(option)));
+                options.add(optionJson);
             }
             json.add("options", options);
         }
 
         return json;
+    }
+
+    private static String getDisplayName(Enum<?> option) {
+        try {
+            DisplayName annotation = option.getDeclaringClass().getField(option.name()).getAnnotation(DisplayName.class);
+            if (annotation == null) return option.name();
+            else return annotation.value();
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static boolean isKnownType(String type) {
@@ -115,9 +129,11 @@ public class WebSocketServer extends NanoWSD {
     private static final class CompleteOutgoing {
         final String type = "complete";
         final Map<String, String> results;
+        final Map<Object, String> resultCode;
 
-        CompleteOutgoing(Map<String, String> results) {
+        CompleteOutgoing(Map<String, String> results, Map<Object, String> resultCode) {
             this.results = results;
+            this.resultCode = resultCode;
         }
     }
 
@@ -279,8 +295,8 @@ public class WebSocketServer extends NanoWSD {
         }
 
         @Override
-        public void complete(Map<String, String> results) throws IOException {
-            sendMessage(new CompleteOutgoing(results));
+        public void complete(Map<String, String> results, Map<Object, String> resultCode) throws IOException {
+            sendMessage(new CompleteOutgoing(results, resultCode));
         }
 
         @Override

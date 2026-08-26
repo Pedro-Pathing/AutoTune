@@ -1,4 +1,5 @@
 import { Moon, Sun } from "lucide-react";
+import { Link } from "react-router";
 
 import logoDark from "../assets/autotune-header-black.svg";
 import logoLight from "../assets/autotune-header-white.svg";
@@ -16,18 +17,18 @@ export default function Header({ abortDisabled, abort }: Props) {
     return (
         <header className="bg-base/80 border-border mx-4 mt-4 h-16 shrink-0 rounded-full border pr-3 shadow-sm backdrop-blur-lg">
             <div className="grid h-full grid-cols-3 grid-rows-1 items-center">
-                <img
-                    src={logoLight}
-                    alt="Autotune Logo"
-                    draggable="false"
-                    className="w-3xs justify-self-start dark:hidden"
-                />
-                <img
-                    src={logoDark}
-                    alt="Autotune Logo"
-                    draggable="false"
-                    className="hidden w-3xs justify-self-start dark:block"
-                />
+                <Link
+                    to="/"
+                    onClick={() => {
+                        if (!abortDisabled) {
+                            abort("The tuner was aborted because you returned to the home page.");
+                        }
+                    }}
+                    className="focus-visible:ring-primary justify-self-start rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                >
+                    <img src={logoLight} draggable="false" className="w-3xs dark:hidden" />
+                    <img src={logoDark} draggable="false" className="hidden w-3xs dark:block" />
+                </Link>
 
                 <span className="text-heading justify-self-center text-center text-lg font-semibold tracking-wide select-none">
                     Pinpoint
@@ -43,7 +44,6 @@ export default function Header({ abortDisabled, abort }: Props) {
                     </button>
                     <button
                         type="button"
-                        aria-label={`Use ${theme === "dark" ? "light" : "dark"} theme`}
                         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                         className="z-50 flex size-10 items-center justify-center rounded-full border border-mauve-400/25 bg-neutral-300/50 p-2 text-black opacity-60 transition-opacity duration-300 hover:opacity-100 dark:bg-neutral-950/50 dark:text-white"
                     >

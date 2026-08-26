@@ -11,7 +11,6 @@ public abstract class TuningOpMode<Result> extends LinearOpMode {
     private final CountDownLatch finished = new CountDownLatch(1);
     private Throwable failure;
     private Result result;
-    private volatile boolean gracefulStopRequested;
 
     public TuningOpMode(String name, String description, boolean canStop) {
         this.name = name;
@@ -32,14 +31,6 @@ public abstract class TuningOpMode<Result> extends LinearOpMode {
     }
 
     protected abstract Result runTuningOpMode() throws InterruptedException;
-
-    protected final boolean tuningOpModeIsActive() {
-        return !gracefulStopRequested && opModeIsActive();
-    }
-
-    final void requestGracefulStop() {
-        if (canStop) gracefulStopRequested = true;
-    }
 
     final Result awaitResult() throws InterruptedException {
         finished.await();

@@ -103,15 +103,8 @@ public final class TuningSession {
 
     private void runProcedure() {
         try {
-            requestConfirmation(
-                    "Important",
-                    "You are now entering tuning mode. Exiting this tab, unfocusing the window, " +
-                            "exiting fullscreen mode, or running a non-tuning OpMode from the driver " +
-                            "station will stop the tuning process. Pressing SPACEBAR or the E-STOP " +
-                            "(emergency stop) button in the top-right corner will also stop the tuning process."
-            );
             procedure.execute();
-            sendWhileRunning(() -> client.complete(procedure.resultSnapshot()));
+            sendWhileRunning(() -> client.complete(procedure.resultSnapshot(), procedure.resultCodeSnapshot()));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             client.error("The tuner ended before it completed.");
@@ -193,8 +186,8 @@ public final class TuningSession {
 
     void stopOpMode(long requestId) {
         synchronized (requestLock) {
-            if (activeOpMode != null && activeOpModeRequestId == requestId) {
-                activeOpMode.requestGracefulStop();
+            if (activeOpMode != null && activeOpModeRequestId == requestId && activeOpMode.canStop) {
+                activeOpMode.requestOpModeStop();
             }
         }
     }
@@ -266,7 +259,7 @@ public final class TuningSession {
 
         void opModeRunning(long requestId, boolean canStop, String name) throws IOException;
 
-        void complete(Map<String, String> results) throws IOException;
+        void complete(Map<String, String> results, Map<Object, String> resultCode) throws IOException;
 
         void error(String message);
     }

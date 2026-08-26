@@ -3,15 +3,15 @@ import { z } from "zod";
 const requestIdSchema = z.int().positive();
 const fieldBase = {
     id: z.string(),
-    name: z.string(),
-    required: z.boolean()
+    name: z.string()
 };
 
 const fieldSchema = z.discriminatedUnion("type", [
     z.object({
         ...fieldBase,
         type: z.literal("STRING"),
-        defaultValue: z.string().optional()
+        defaultValue: z.string().optional(),
+        allowEmpty: z.boolean()
     }),
     z.object({
         ...fieldBase,
@@ -31,12 +31,17 @@ const fieldSchema = z.discriminatedUnion("type", [
         ...fieldBase,
         type: z.literal("ENUM"),
         defaultValue: z.string().optional(),
-        options: z.string().array()
+        options: z.array(
+            z.object({
+                name: z.string(),
+                displayName: z.string()
+            })
+        )
     }),
     z.object({
         ...fieldBase,
         type: z.literal("BOOLEAN"),
-        defaultValue: z.boolean().optional()
+        defaultValue: z.boolean()
     })
 ]);
 
@@ -69,7 +74,8 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("complete"),
-        results: z.record(z.string(), z.string())
+        results: z.record(z.string(), z.string()),
+        resultCode: z.record(z.string(), z.string())
     }),
     z.object({
         type: z.literal("error"),
