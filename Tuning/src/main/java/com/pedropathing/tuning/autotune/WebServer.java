@@ -6,6 +6,7 @@ import fi.iki.elonen.NanoHTTPD;
 import org.firstinspires.ftc.robotserver.internal.webserver.MimeTypesUtil;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class WebServer extends NanoHTTPD {
@@ -32,6 +33,15 @@ public class WebServer extends NanoHTTPD {
                     }
 
                     return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not found.");
+                }
+
+                if (uri.toLowerCase().startsWith("/images")) {
+                    Map<String, ImageRegistrar.Image> images = ImageRegistrar.getImages();
+                    String id = uri.substring("/images/".length());
+                    if (images.containsKey(id)) {
+                        ImageRegistrar.Image image = images.get(id);
+                        return newChunkedResponse(Response.Status.OK, image.mimeType, image.data.call());
+                    } else return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not found.");
                 }
 
                 if (uri.equalsIgnoreCase("/favicon.svg") || uri.toLowerCase().startsWith("/assets/")) {

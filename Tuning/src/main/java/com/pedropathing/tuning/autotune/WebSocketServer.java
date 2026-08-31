@@ -1,12 +1,7 @@
 package com.pedropathing.tuning.autotune;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
+import com.google.gson.*;
+import com.google.gson.typeadapters.RuntimeTypeAdapterFactory;
 import fi.iki.elonen.NanoWSD;
 
 import java.io.IOException;
@@ -14,30 +9,11 @@ import java.lang.reflect.Type;
 import java.util.Map;
 
 public class WebSocketServer extends NanoWSD {
-    private static final Gson GSON = new GsonBuilder()
-            .registerTypeAdapter(
-                    Inputs.Field.class,
-                    (JsonSerializer<Inputs.Field<?>>) WebSocketServer::serializeInputField
-            )
-            .create();
-
-    private static final Object socketLock = new Object();
-    private static Socket activeSocket;
-
-    public WebSocketServer() {
-        super(12649);
-    }
-
-    @Override
-    protected WebSocket openWebSocket(IHTTPSession handshake) {
-        return new Socket(handshake);
-    }
-
-    private static JsonElement serializeInputField(
+    private static final JsonSerializer<Inputs.Field<?>> inputFieldSerializer = (
             Inputs.Field<?> field,
-            Type ignoredType,
+            Type type,
             JsonSerializationContext context
-    ) {
+    ) -> {
         JsonObject json = new JsonObject();
         json.addProperty("id", field.id);
         json.addProperty("name", field.name);
@@ -67,6 +43,31 @@ public class WebSocketServer extends NanoWSD {
         }
 
         return json;
+    };
+
+    private static final JsonSerializer<ImageRegistrar.Handle> imageHandleSerializer = (
+            ImageRegistrar.Handle handle,
+            Type type,
+            JsonSerializationContext context
+    ) -> context.serialize(handle.id);
+
+    private static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(Inputs.Field.class, inputFieldSerializer)
+            .registerTypeAdapter(ImageRegistrar.Handle.class, imageHandleSerializer)
+            .registerTypeAdapterFactory(
+                    RuntimeTypeAdapterFactory
+                            .of(Display.class, "type")
+                            .registerSubtype(Display.Image.class, "image")
+                            .registerSubtype(Display.FourWheelBot.class, "fourWheelBot")
+            )
+            .create();
+
+    private static final Object socketLock = new Object();
+    private static Socket activeSocket;
+
+
+    public WebSocketServer() {
+        super(12649);
     }
 
     private static String getDisplayName(Enum<?> option) {
@@ -95,6 +96,11 @@ public class WebSocketServer extends NanoWSD {
         return message;
     }
 
+    @Override
+    protected WebSocket openWebSocket(IHTTPSession handshake) {
+        return new Socket(handshake);
+    }
+
     private static final class Incoming {
         String type;
         String id;
@@ -107,11 +113,13 @@ public class WebSocketServer extends NanoWSD {
         final long requestId;
         final String title;
         final String message;
+        final Display display;
 
-        ConfirmationOutgoing(long requestId, String title, String message) {
+        ConfirmationOutgoing(long requestId, String title, String message, Display display) {
             this.requestId = requestId;
             this.title = title;
             this.message = message;
+            this.display = display;
         }
     }
 
@@ -119,10 +127,12 @@ public class WebSocketServer extends NanoWSD {
         final String type = "inputs";
         final long requestId;
         final Inputs inputs;
+        final Display display;
 
-        InputsOutgoing(long requestId, Inputs inputs) {
+        InputsOutgoing(long requestId, Inputs inputs, Display display) {
             this.requestId = requestId;
             this.inputs = inputs;
+            this.display = display;
         }
     }
 
@@ -142,11 +152,13 @@ public class WebSocketServer extends NanoWSD {
         final long requestId;
         final boolean canStop;
         final String name;
+        final Display display;
 
-        OpModeRunningOutgoing(long requestId, boolean canStop, String name) {
+        OpModeRunningOutgoing(long requestId, boolean canStop, String name, Display display) {
             this.requestId = requestId;
             this.canStop = canStop;
             this.name = name;
+            this.display = display;
         }
     }
 
@@ -280,18 +292,18 @@ public class WebSocketServer extends NanoWSD {
         }
 
         @Override
-        public void requestConfirmation(long requestId, String title, String message) throws IOException {
-            sendMessage(new ConfirmationOutgoing(requestId, title, message));
+        public void requestConfirmation(long requestId, String title, String message, Display display) throws IOException {
+            sendMessage(new ConfirmationOutgoing(requestId, title, message, display));
         }
 
         @Override
-        public void requestInputs(long requestId, Inputs inputs) throws IOException {
-            sendMessage(new InputsOutgoing(requestId, inputs));
+        public void requestInputs(long requestId, Inputs inputs, Display display) throws IOException {
+            sendMessage(new InputsOutgoing(requestId, inputs, display));
         }
 
         @Override
-        public void opModeRunning(long requestId, boolean canStop, String name) throws IOException {
-            sendMessage(new OpModeRunningOutgoing(requestId, canStop, name));
+        public void opModeRunning(long requestId, boolean canStop, String name, Display display) throws IOException {
+            sendMessage(new OpModeRunningOutgoing(requestId, canStop, name, display));
         }
 
         @Override

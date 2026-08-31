@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const requestIdSchema = z.int().positive();
+const imageHandleSchema = z.string().length(6);
+
 const fieldBase = {
     id: z.string(),
     name: z.string()
@@ -54,23 +56,44 @@ export const inputsPayloadSchema = z.object({
 export type FieldDefinition = z.infer<typeof fieldSchema>;
 export type InputsPayload = z.infer<typeof inputsPayloadSchema>;
 
+export const wheelSchema = z.enum(["FRONT_LEFT", "FRONT_RIGHT", "BACK_LEFT", "BACK_RIGHT"]);
+
+export const displaySchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal("image"),
+        lightMode: imageHandleSchema,
+        darkMode: imageHandleSchema
+    }),
+    z.object({
+        type: z.literal("fourWheelBot"),
+        wheel: wheelSchema,
+        reversed: z.boolean()
+    })
+]);
+
+export type Wheel = z.infer<typeof wheelSchema>;
+export type DisplayDefinition = z.infer<typeof displaySchema>;
+
 export const serverMessageSchema = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("confirm"),
         requestId: requestIdSchema,
         title: z.string(),
-        message: z.string()
+        message: z.string(),
+        display: displaySchema.optional()
     }),
     z.object({
         type: z.literal("inputs"),
         requestId: requestIdSchema,
-        inputs: inputsPayloadSchema
+        inputs: inputsPayloadSchema,
+        display: displaySchema.optional()
     }),
     z.object({
         type: z.literal("opModeRunning"),
         requestId: requestIdSchema,
         canStop: z.boolean(),
-        name: z.string()
+        name: z.string(),
+        display: displaySchema.optional()
     }),
     z.object({
         type: z.literal("complete"),

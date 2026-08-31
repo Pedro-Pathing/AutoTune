@@ -19,15 +19,23 @@ export default function Tuner() {
             <Header abortDisabled={ended} abort={abort} />
             {state.type === "loading" && <Loading />}
             {state.type === "confirmation" && (
-                <Confirmation title={state.title} message={state.message} onConfirm={confirm} />
+                <Confirmation
+                    title={state.title}
+                    message={state.message}
+                    display={state.display}
+                    onConfirm={confirm}
+                />
             )}
             {state.type === "complete" && (
                 <Complete results={state.results} resultCode={state.resultCode} />
             )}
-            {state.type === "inputs" && <Inputs {...state.inputs} onSubmit={submitInputs} />}
+            {state.type === "inputs" && (
+                <Inputs {...state.inputs} display={state.display} onSubmit={submitInputs} />
+            )}
             {state.type === "opModeRunning" && (
                 <OpMode
                     name={state.name}
+                    display={state.display}
                     canStop={state.canStop}
                     stopRequested={state.stopRequested}
                     onStop={stopOpMode}

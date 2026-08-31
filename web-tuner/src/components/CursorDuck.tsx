@@ -1,3 +1,4 @@
+// thanks so much to chatgpt for making this duck
 import { useEffect, useRef } from "react";
 
 const DUCK_SIZE = 60;

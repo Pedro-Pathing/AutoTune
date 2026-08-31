@@ -62,16 +62,20 @@ public final class TuningSession {
         session.thread.interrupt();
     }
 
-    static void requestConfirmation(String title, String message) throws InterruptedException {
-        requireCurrentSession().awaitConfirmation(title, message);
+    static void abort(String message) throws InterruptedException {
+        requireCurrentSession().abortProcedure(message);
     }
 
-    static void requestInputs(Inputs inputs) throws InterruptedException {
-        requireCurrentSession().awaitInputs(inputs);
+    static void requestConfirmation(String title, String message, Display display) throws InterruptedException {
+        requireCurrentSession().awaitConfirmation(title, message, display);
     }
 
-    static void opModeStarted(TuningOpMode<?> opMode) throws InterruptedException {
-        requireCurrentSession().beginOpMode(opMode);
+    static void requestInputs(Inputs inputs, Display display) throws InterruptedException {
+        requireCurrentSession().awaitInputs(inputs, display);
+    }
+
+    static void opModeStarted(TuningOpMode<?> opMode, Display display) throws InterruptedException {
+        requireCurrentSession().beginOpMode(opMode, display);
     }
 
     static void opModeFinished(TuningOpMode<?> opMode) {
@@ -105,12 +109,19 @@ public final class TuningSession {
         try {
             procedure.execute();
             sendWhileRunning(() -> client.complete(procedure.resultSnapshot(), procedure.resultCodeSnapshot()));
+        } catch (ProcedureAbortException exception) {
+            Thread.currentThread().interrupt();
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             client.error("The tuner ended before it completed.");
         } catch (IOException | RuntimeException | Error exception) {
             reportFailure(exception);
         }
+    }
+
+    private void abortProcedure(String message) throws InterruptedException {
+        client.error(message);
+        throw new ProcedureAbortException();
     }
 
     boolean confirm(long requestId) {
@@ -140,23 +151,23 @@ public final class TuningSession {
         request.complete();
     }
 
-    private void awaitConfirmation(String title, String message) throws InterruptedException {
+    private void awaitConfirmation(String title, String message, Display display) throws InterruptedException {
         awaitRequest(
                 RequestType.CONFIRMATION,
                 null,
-                requestId -> client.requestConfirmation(requestId, title, message)
+                requestId -> client.requestConfirmation(requestId, title, message, display)
         );
     }
 
-    private void awaitInputs(Inputs inputs) throws InterruptedException {
+    private void awaitInputs(Inputs inputs, Display display) throws InterruptedException {
         awaitRequest(
                 RequestType.INPUTS,
                 inputs,
-                requestId -> client.requestInputs(requestId, inputs)
+                requestId -> client.requestInputs(requestId, inputs, display)
         );
     }
 
-    private void beginOpMode(TuningOpMode<?> opMode) throws InterruptedException {
+    private void beginOpMode(TuningOpMode<?> opMode, Display display) throws InterruptedException {
         long requestId;
         synchronized (requestLock) {
             if (activeOpMode != null) {
@@ -168,7 +179,7 @@ public final class TuningSession {
         }
 
         try {
-            sendWhileRunning(() -> client.opModeRunning(requestId, opMode.canStop, opMode.name));
+            sendWhileRunning(() -> client.opModeRunning(requestId, opMode.canStop, opMode.name, display));
         } catch (IOException exception) {
             abort(this);
             throw new InterruptedException();
@@ -253,11 +264,11 @@ public final class TuningSession {
     }
 
     interface Transport {
-        void requestConfirmation(long requestId, String title, String message) throws IOException;
+        void requestConfirmation(long requestId, String title, String message, Display display) throws IOException;
 
-        void requestInputs(long requestId, Inputs inputs) throws IOException;
+        void requestInputs(long requestId, Inputs inputs, Display display) throws IOException;
 
-        void opModeRunning(long requestId, boolean canStop, String name) throws IOException;
+        void opModeRunning(long requestId, boolean canStop, String name, Display display) throws IOException;
 
         void complete(Map<String, String> results, Map<Object, String> resultCode) throws IOException;
 
@@ -270,6 +281,9 @@ public final class TuningSession {
 
     private interface RequestSender {
         void send(long requestId) throws IOException;
+    }
+
+    private static final class ProcedureAbortException extends InterruptedException {
     }
 
     private static final class PendingRequest {

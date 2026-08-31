@@ -13,6 +13,7 @@ public abstract class Procedure {
 
     private final Map<String, String> results = new LinkedHashMap<>();
     private final Map<Object, String> resultCode = new LinkedHashMap<>();
+    private Display currentDisplay;
 
     public Procedure(String name, String description) {
         this.name = name;
@@ -28,7 +29,7 @@ public abstract class Procedure {
     }
 
     protected void confirmation(String title, String message) throws InterruptedException {
-        TuningSession.requestConfirmation(title, message);
+        TuningSession.requestConfirmation(title, message, currentDisplay);
     }
 
     protected Inputs inputs(String title, String description) {
@@ -36,7 +37,21 @@ public abstract class Procedure {
     }
 
     protected void awaitInputs(Inputs inputs) throws InterruptedException {
-        TuningSession.requestInputs(inputs);
+        TuningSession.requestInputs(inputs, currentDisplay);
+    }
+
+    protected final void abort(String message) throws InterruptedException {
+        TuningSession.abort(message);
+    }
+
+    protected void withDisplay(Display display, InterruptibleBlock block) throws InterruptedException {
+        Display previousDisplay = this.currentDisplay;
+        this.currentDisplay = display;
+        try {
+            block.execute();
+        } finally {
+            this.currentDisplay = previousDisplay;
+        }
     }
 
     protected final void result(String name, String value) {
@@ -64,7 +79,7 @@ public abstract class Procedure {
     }
 
     protected final <Result> Result runOpMode(TuningOpMode<Result> opMode) throws InterruptedException {
-        TuningSession.requestConfirmation(opMode.name, opMode.description);
+        TuningSession.requestConfirmation(opMode.name, opMode.description, currentDisplay);
 
         OpModeMeta meta = new OpModeMeta.Builder()
                 .setName("Pedro Tuning")
@@ -76,7 +91,7 @@ public abstract class Procedure {
         try {
             manager.initOpMode(meta.name);
             manager.startActiveOpMode();
-            TuningSession.opModeStarted(opMode);
+            TuningSession.opModeStarted(opMode, currentDisplay);
             return opMode.awaitResult();
         } finally {
             TuningSession.opModeFinished(opMode);

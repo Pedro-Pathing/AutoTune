@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { InputsPayload } from "../lib/schemas";
+import type { DisplayDefinition, InputsPayload } from "../lib/schemas";
 import {
     TuningConnection,
     type ConnectionFailure,
@@ -9,14 +9,21 @@ import {
 
 type State =
     | { type: "loading" }
-    | { type: "confirmation"; requestId: number; title: string; message: string }
-    | { type: "inputs"; requestId: number; inputs: InputsPayload }
+    | {
+          type: "confirmation";
+          requestId: number;
+          title: string;
+          message: string;
+          display?: DisplayDefinition;
+      }
+    | { type: "inputs"; requestId: number; inputs: InputsPayload; display?: DisplayDefinition }
     | {
           type: "opModeRunning";
           requestId: number;
           canStop: boolean;
           stopRequested: boolean;
           name: string;
+          display?: DisplayDefinition;
       }
     | { type: "complete"; results: Record<string, string>; resultCode: Record<string, string> }
     | { type: "error"; message: string };
@@ -30,13 +37,15 @@ function messageToState(message: TunerMessage): State {
                 type: "confirmation",
                 requestId: message.requestId,
                 title: message.title,
-                message: message.message
+                message: message.message,
+                display: message.display
             };
         case "inputs":
             return {
                 type: "inputs",
                 requestId: message.requestId,
-                inputs: message.inputs
+                inputs: message.inputs,
+                display: message.display
             };
         case "opModeRunning":
             return {
@@ -44,7 +53,8 @@ function messageToState(message: TunerMessage): State {
                 requestId: message.requestId,
                 canStop: message.canStop,
                 stopRequested: false,
-                name: message.name
+                name: message.name,
+                display: message.display
             };
         case "complete":
             return { type: "complete", results: message.results, resultCode: message.resultCode };

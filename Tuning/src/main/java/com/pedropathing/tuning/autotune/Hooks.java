@@ -15,8 +15,10 @@ class Hooks {
     private static volatile WebSocketServer wsServer;
     private static final OnCreateEventLoop onCreateEventLoop = (context, eventLoop) ->
     {
+        // everything except for opModeManager could be in OnCreate instead, but we do it all here for simplicity.
         opModeManager = eventLoop.getOpModeManager();
         server = new WebServer(context.getAssets());
+        ImageRegistrar.assets = context.getAssets();
         wsServer = new WebSocketServer();
         try {
             server.start();
