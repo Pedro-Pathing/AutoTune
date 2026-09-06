@@ -1,6 +1,7 @@
 import Java from "@devicon/react/java/plain";
 import Kotlin from "@devicon/react/kotlin/plain";
 import clsx from "clsx";
+import copy from "copy-to-clipboard";
 import { ArrowRight, Braces, Check, Copy, Table2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
@@ -73,7 +74,7 @@ export default function Complete({ results, resultCode }: Props) {
                                 </p>
                             )
                         ) : (
-                            <CodeBlock code={resultCode[activeTab]} tab={activeTab} />
+                            <CodeBlock key={activeTab} code={resultCode[activeTab]} tab={activeTab} />
                         )}
                     </div>
                 </div>
@@ -138,8 +139,10 @@ function TabButton({
     );
 }
 
+type CopyStatus = "idle" | "copied" | "failed";
+
 function CodeBlock({ code, tab }: { code: string; tab: string }) {
-    const [copied, setCopied] = useState(false);
+    const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
     const [formattedCode, setFormattedCode] = useState("");
 
     useEffect(() => {
@@ -164,19 +167,15 @@ function CodeBlock({ code, tab }: { code: string; tab: string }) {
     }, [code, tab]);
 
     useEffect(() => {
-        if (!copied) return;
+        if (copyStatus === "idle") return;
 
-        const timeout = window.setTimeout(() => setCopied(false), 2000);
+        const timeout = window.setTimeout(() => setCopyStatus("idle"), 2000);
         return () => window.clearTimeout(timeout);
-    }, [copied]);
+    }, [copyStatus]);
 
     async function copyCode() {
-        try {
-            await navigator.clipboard.writeText(code);
-            setCopied(true);
-        } catch {
-            setCopied(false);
-        }
+            const success = await copy(code).catch(() => false);
+            setCopyStatus(success ? "copied" : "failed");
     }
 
     return (
@@ -186,12 +185,18 @@ function CodeBlock({ code, tab }: { code: string; tab: string }) {
                 type="button"
                 onClick={() => void copyCode()}
             >
-                {copied ? (
+                {copyStatus === "copied" ? (
                     <Check className="text-primary size-3.5" />
                 ) : (
                     <Copy className="size-3.5" />
                 )}
-                <span>{copied ? "Copied" : "Copy"}</span>
+                <span aria-live="polite">
+                    {copyStatus === "copied"
+                        ? "Copied"
+                        : copyStatus === "failed"
+                          ? "Copy failed"
+                          : "Copy"}
+                </span>
             </button>
 
             <div
