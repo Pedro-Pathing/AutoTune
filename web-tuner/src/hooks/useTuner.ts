@@ -63,6 +63,7 @@ function messageToState(message: TunerMessage): State {
 
 export function useTuner(id: string | undefined) {
     const [state, setState] = useState<State>({ type: "loading" });
+    const [tunerName, setTunerName] = useState("Loading...");
     const connectionRef = useRef<TuningConnection | null>(null);
 
     useEffect(() => {
@@ -87,7 +88,8 @@ export function useTuner(id: string | undefined) {
                 },
                 (failure: ConnectionFailure) => {
                     setState({ type: "error", ...failure });
-                }
+                },
+                setTunerName
             );
         } catch (error) {
             console.error("Failed to create WebSocket:", error);
@@ -150,5 +152,5 @@ export function useTuner(id: string | undefined) {
         setState({ type: "error", message });
     }, []);
 
-    return { state, confirm, submitInputs, stopOpMode, abort };
+    return { state, confirm, submitInputs, stopOpMode, abort, tunerName };
 }

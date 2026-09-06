@@ -11,12 +11,12 @@ import { useTuner } from "../hooks/useTuner";
 
 export default function Tuner() {
     const { id } = useParams();
-    const { state, confirm, submitInputs, stopOpMode, abort } = useTuner(id);
+    const { state, confirm, submitInputs, stopOpMode, abort, tunerName } = useTuner(id);
     const ended = state.type === "complete" || state.type === "error";
 
     return (
         <div className="flex h-screen flex-col overflow-hidden">
-            <Header abortDisabled={ended} abort={abort} />
+            <Header abortDisabled={ended} abort={abort} tunerName={tunerName} />
             {state.type === "loading" && <Loading />}
             {state.type === "confirmation" && (
                 <Confirmation

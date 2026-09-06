@@ -103,6 +103,10 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("error"),
         message: z.string()
+    }),
+    z.object({
+        type: z.literal("init"),
+        name: z.string()
     })
 ]);
 

@@ -7,29 +7,29 @@ import java.util.concurrent.CountDownLatch;
 public final class TuningSession {
     private static final Object sessionLock = new Object();
     private static TuningSession currentSession;
-
+    public final String name;
     private final Object requestLock = new Object();
     private final Procedure procedure;
     private final Transport client;
     private final Thread thread;
-
     private boolean abortRequested;
     private long nextRequestId;
     private PendingRequest activeRequest;
     private long activeOpModeRequestId;
     private TuningOpMode<?> activeOpMode;
 
-    private TuningSession(Procedure procedure, Transport client) {
+    private TuningSession(Procedure procedure, Transport client, String name) {
         this.procedure = procedure;
         this.client = client;
+        this.name = name;
         thread = new Thread(this::execute, "Pedro-Tuning");
     }
 
     static TuningSession beginProcedure(String id, Transport client) {
-        Procedure procedure = TunerRegistrar.getProcedure(id);
+        TunerRegistrar.RegisteredProcedure procedure = TunerRegistrar.getProcedure(id);
         if (procedure == null) return null;
 
-        TuningSession session = new TuningSession(procedure, client);
+        TuningSession session = new TuningSession(procedure.procedure, client, procedure.name);
         synchronized (sessionLock) {
             if (currentSession != null) return null;
 
@@ -93,6 +93,12 @@ public final class TuningSession {
             }
             return currentSession;
         }
+    }
+
+    private static boolean matches(PendingRequest request, RequestType type, long requestId) {
+        return request != null &&
+                request.type == type &&
+                (requestId == 0 || request.id == requestId);
     }
 
     private void execute() {
@@ -232,12 +238,6 @@ public final class TuningSession {
 
     private void clearRequest(PendingRequest request) {
         if (activeRequest == request) activeRequest = null;
-    }
-
-    private static boolean matches(PendingRequest request, RequestType type, long requestId) {
-        return request != null &&
-                request.type == type &&
-                (requestId == 0 || request.id == requestId);
     }
 
     private void sendWhileRunning(IoAction action) throws IOException, InterruptedException {

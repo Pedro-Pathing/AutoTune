@@ -147,6 +147,15 @@ public class WebSocketServer extends NanoWSD {
         }
     }
 
+    private static final class InitOutgoing {
+        final String type = "init";
+        final String name;
+
+        InitOutgoing(String name) {
+            this.name = name;
+        }
+    }
+
     private static final class OpModeRunningOutgoing {
         final String type = "opModeRunning";
         final long requestId;
@@ -252,7 +261,8 @@ public class WebSocketServer extends NanoWSD {
 
             try {
                 session = TuningSession.beginProcedure(id, this);
-            } catch (RuntimeException exception) {
+                if (session != null) sendMessage(new InitOutgoing(session.name));
+            } catch (RuntimeException | IOException exception) {
                 fail(failureMessage(exception), exception);
                 return;
             }

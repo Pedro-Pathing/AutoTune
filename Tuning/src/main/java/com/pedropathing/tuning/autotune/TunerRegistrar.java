@@ -26,10 +26,9 @@ public class TunerRegistrar {
         return Collections.unmodifiableList(procedures);
     }
 
-    public static Procedure getProcedure(String id) {
+    public static RegisteredProcedure getProcedure(String id) {
         return procedures.stream()
                 .filter(procedure -> procedure.id.equals(id))
-                .map(procedure -> procedure.procedure)
                 .findFirst()
                 .orElse(null);
     }

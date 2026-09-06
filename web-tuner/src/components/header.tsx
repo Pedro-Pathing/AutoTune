@@ -9,9 +9,10 @@ import { useTheme } from "../lib/theme";
 type Props = {
     abortDisabled: boolean;
     abort: AbortHandler;
+    tunerName: string;
 };
 
-export default function Header({ abortDisabled, abort }: Props) {
+export default function Header({ abortDisabled, abort, tunerName }: Props) {
     const [theme, setTheme] = useTheme();
 
     return (
@@ -31,7 +32,7 @@ export default function Header({ abortDisabled, abort }: Props) {
                 </Link>
 
                 <span className="text-heading justify-self-center text-center text-lg font-semibold tracking-wide select-none">
-                    Pinpoint
+                    {tunerName}
                 </span>
                 <div className="flex items-center gap-3.5 justify-self-end">
                     <button

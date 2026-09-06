@@ -1,7 +1,7 @@
 import { serverMessageSchema, type ServerMessage } from "./schemas";
 
 export type ConnectionFailure = { message: string };
-export type TunerMessage = Exclude<ServerMessage, { type: "error" }>;
+export type TunerMessage = Exclude<ServerMessage, { type: "error" | "init" }>;
 
 export class TuningConnection {
     private readonly socket: WebSocket;
@@ -11,7 +11,8 @@ export class TuningConnection {
     constructor(
         id: string,
         private readonly onMessage: (message: TunerMessage) => void,
-        private readonly onFailure: (failure: ConnectionFailure) => void
+        private readonly onFailure: (failure: ConnectionFailure) => void,
+        private readonly setTunerName: (name: string) => void
     ) {
         this.socket = new WebSocket(`ws://${window.location.hostname}:12649`);
         this.socket.onopen = () => {
@@ -92,6 +93,11 @@ export class TuningConnection {
         if (message.type === "complete") {
             this.ended = true;
             this.socket.close();
+        }
+
+        if (message.type === "init") {
+            this.setTunerName(message.name);
+            return;
         }
 
         this.onMessage(message);
