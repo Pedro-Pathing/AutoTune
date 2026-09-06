@@ -9,30 +9,48 @@ import java.io.IOException;
 @SuppressWarnings("unused")
 class Hooks {
 
+    private static final Object serverLock = new Object();
+
     @SuppressWarnings("StaticFieldLeak")
     private static volatile OpModeManagerImpl opModeManager;
     private static volatile WebServer server;
     private static volatile WebSocketServer wsServer;
     private static final OnCreateEventLoop onCreateEventLoop = (context, eventLoop) ->
     {
-        // everything except for opModeManager could be in OnCreate instead, but we do it all here for simplicity.
-        opModeManager = eventLoop.getOpModeManager();
-        server = new WebServer(context.getAssets());
-        ImageRegistrar.assets = context.getAssets();
-        wsServer = new WebSocketServer();
-        try {
-            server.start();
-            wsServer.start(Integer.MAX_VALUE);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        synchronized (serverLock) {
+            stop();
+            opModeManager = eventLoop.getOpModeManager();
+            ImageRegistrar.assets = context.getAssets();
+            server = new WebServer(context.getAssets());
+            wsServer = new WebSocketServer();
+            try {
+                server.start();
+                wsServer.start(Integer.MAX_VALUE);
+            } catch (IOException e) {
+                stop();
+                throw new RuntimeException(e);
+            }
         }
     };
 
     private static final OnDestroy onDestroy = context -> {
-        TuningSession.abort();
-        server.stop();
-        wsServer.stop();
+        synchronized (serverLock) {
+            stop();
+            opModeManager = null;
+        }
     };
+
+    private static void stop() {
+        TuningSession.abort();
+        if (wsServer != null) {
+            wsServer.stop();
+            wsServer = null;
+        }
+        if (server != null) {
+            server.stop();
+            server = null;
+        }
+    }
 
     static OpModeManagerImpl getOpModeManager() {
         return opModeManager;
