@@ -1,5 +1,6 @@
 package com.pedropathing.tuning.autotune;
 
+import android.util.Log;
 import com.google.gson.*;
 import com.google.gson.typeadapters.RuntimeTypeAdapterFactory;
 import fi.iki.elonen.NanoWSD;
@@ -197,7 +198,37 @@ public class WebSocketServer extends NanoWSD {
         }
 
         @Override
+        protected void debugFrameReceived(WebSocketFrame frame) {
+            logCloseFrame("RECEIVED", frame);
+        }
+
+        @Override
+        protected void debugFrameSent(WebSocketFrame frame) {
+            logCloseFrame("SENT", frame);
+        }
+
+        private void logCloseFrame(String direction, WebSocketFrame frame) {
+            if (frame.getOpCode() != WebSocketFrame.OpCode.Close) return;
+
+            // NanoWSD does not populate the CloseFrame getters for outgoing frames.
+            byte[] payload = frame.getBinaryPayload();
+            String code = payload.length >= 2
+                    ? Integer.toString(((payload[0] & 0xff) << 8) | (payload[1] & 0xff))
+                    : "none";
+            String reason = payload.length > 2
+                    ? new String(payload, 2, payload.length - 2, java.nio.charset.StandardCharsets.UTF_8)
+                    : "";
+            Log.d("WebSocketServer",
+                    "socket=" + Integer.toHexString(System.identityHashCode(this))
+                    + " peer=" + getHandshakeRequest().getRemoteIpAddress()
+                    + " " + direction + " CLOSE"
+                    + " code=" + code
+                    + " reason=" + reason);
+        }
+
+        @Override
         protected void onClose(WebSocketFrame.CloseCode code, String reason, boolean initiatedByRemote) {
+            Log.d("WebSocketServer", "WebSocket closed, code: " + code  + ", reason: " + reason + ", initiatedByRemote: " + initiatedByRemote);
             release();
         }
 
@@ -298,6 +329,7 @@ public class WebSocketServer extends NanoWSD {
 
         @Override
         protected void onException(IOException exception) {
+            Log.e("WebSocketServer", "WebSocket IO Error", exception);
             release();
         }
 

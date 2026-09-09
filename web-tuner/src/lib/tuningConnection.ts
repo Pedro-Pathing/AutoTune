@@ -26,7 +26,16 @@ export class TuningConnection {
         };
         this.socket.onmessage = (event) => this.handleMessage(event);
         this.socket.onerror = () => this.fail("The connection to the tuning server failed.");
-        this.socket.onclose = () => this.fail("The tuning server disconnected.");
+        this.socket.onclose = (event) => {
+            console.error("Tuning WebSocket closed", {
+                code: event.code,
+                reason: event.reason,
+                wasClean: event.wasClean,
+                sessionAlreadyEnded: this.ended
+            });
+
+            this.fail("The tuning server disconnected.");
+        };
 
         this.armDeadline(
             10_000,
