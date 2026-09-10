@@ -13,7 +13,6 @@ version = property("version") as String
 
 repositories {
     mavenCentral()
-    maven("https://central.sonatype.com/repository/maven-snapshots/") // TODO: remove
     maven("https://repo.dairy.foundation/releases/")
     google()
 }
@@ -43,8 +42,8 @@ dependencies {
     compileOnly("org.firstinspires.ftc:FtcCommon:11.2.1")
     compileOnly("org.firstinspires.ftc:RobotServer:11.2.1")
     dokkaPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:2.2.0")
-    implementation("com.pedropathing:revhub:3.0.0-SNAPSHOT")
-    implementation("dev.frozenmilk.sinister:Sloth:0.2.4")
+    implementation("com.pedropathing:revhub:3.0.0")
+    implementation("dev.frozenmilk.sinister:Sloth:0.3.0")
     implementation("com.aventrix.jnanoid:jnanoid:2.0.0")
     implementation("org.nanohttpd:nanohttpd-websocket:2.3.1") {
         exclude(module = "nanohttpd")
