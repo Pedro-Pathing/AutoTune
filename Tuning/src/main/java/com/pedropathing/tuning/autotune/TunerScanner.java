@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 public class TunerScanner implements Scanner {
     public static final TunerScanner INSTANCE = new TunerScanner();
+    private final SearchTarget searchTarget = new NarrowSearch();
 
     @Override
     public AdjacencyRule<Scanner, Graph<Scanner>> getLoadAdjacencyRule() {
@@ -28,7 +29,7 @@ public class TunerScanner implements Scanner {
 
     @Override
     public SearchTarget getTargets() {
-        return new NarrowSearch();
+        return searchTarget;
     }
 
     @Override
@@ -58,7 +59,10 @@ public class TunerScanner implements Scanner {
     }
 
     @Override
-    public void unload(ClassLoader loader, Class<?> clazz) {
+    public void unload(ClassLoader loader, Class<?> clazz) {}
+
+    @Override
+    public void beforeUnload(ClassLoader loader) {
         TunerRegistrar.deregisterAll();
     }
 }
