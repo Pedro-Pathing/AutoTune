@@ -9,13 +9,21 @@ import static com.pedropathing.tuning.autotune.Utils.nanoid;
 public class TunerRegistrar {
     private static final List<RegisteredProcedure> procedures = new ArrayList<>();
 
+    static void register(RegisteredProcedure procedure) {
+        procedures.add(procedure);
+    }
+
     public static void register(String name, Procedure procedure) {
-        procedures.add(
+        register(
                 new RegisteredProcedure(
                         name.isEmpty() ? procedure.name : name,
                         procedure
                 )
         );
+    }
+
+    static void deregister(RegisteredProcedure procedure) {
+        procedures.remove(procedure);
     }
 
     public static void deregisterAll() {
