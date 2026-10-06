@@ -1,5 +1,6 @@
 package com.pedropathing.tuning.autotune;
 
+import com.pedropathing.tuning.autotune.TunerRegistrar.RegisteredProcedure;
 import dev.frozenmilk.sinister.Scanner;
 import dev.frozenmilk.sinister.targeting.NarrowSearch;
 import dev.frozenmilk.sinister.targeting.SearchTarget;
@@ -9,12 +10,13 @@ import dev.frozenmilk.util.graph.rule.AdjacencyRule;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TunerScanner implements Scanner {
     public static final TunerScanner INSTANCE = new TunerScanner();
+    private final SearchTarget searchTarget = new NarrowSearch();
+    private final Map<ClassLoader, List<RegisteredProcedure>> proceduresByLoader = new HashMap<>();
 
     @Override
     public AdjacencyRule<Scanner, Graph<Scanner>> getLoadAdjacencyRule() {
@@ -28,7 +30,7 @@ public class TunerScanner implements Scanner {
 
     @Override
     public SearchTarget getTargets() {
-        return new NarrowSearch();
+        return searchTarget;
     }
 
     @Override
@@ -53,12 +55,20 @@ public class TunerScanner implements Scanner {
                 continue;
             }
             Tuner annotation = factory.getAnnotation(Tuner.class);
-            TunerRegistrar.register(annotation.name(), procedure);
+            RegisteredProcedure registered = new RegisteredProcedure(annotation.name(), procedure);
+            proceduresByLoader.putIfAbsent(loader, new ArrayList<>()).add(registered);
+            TunerRegistrar.register(registered);
         }
     }
 
     @Override
-    public void unload(ClassLoader loader, Class<?> clazz) {
-        TunerRegistrar.deregisterAll();
+    public void unload(ClassLoader loader, Class<?> clazz) {}
+
+    @Override
+    public void beforeUnload(ClassLoader loader) {
+        List<RegisteredProcedure> procedures = proceduresByLoader.remove(loader);
+        if (procedures != null) {
+            procedures.forEach(TunerRegistrar::deregister);
+        }
     }
 }
