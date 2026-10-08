@@ -56,7 +56,7 @@ public class TunerScanner implements Scanner {
             }
             Tuner annotation = factory.getAnnotation(Tuner.class);
             RegisteredProcedure registered = new RegisteredProcedure(annotation.name(), procedure);
-            proceduresByLoader.putIfAbsent(loader, new ArrayList<>()).add(registered);
+            proceduresByLoader.computeIfAbsent(loader, (unused) -> new ArrayList<>()).add(registered);
             TunerRegistrar.register(registered);
         }
     }
