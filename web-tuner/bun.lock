@@ -13,6 +13,7 @@
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
         "react-router": "^8.3.0",
+        "reconnecting-websocket": "^4.4.0",
         "shiki": "^4.4.3",
         "zod": "^4.4.3",
       },
@@ -409,6 +410,8 @@
     "react-dom": ["react-dom@19.2.8", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.8" } }, "sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ=="],
 
     "react-router": ["react-router@8.3.0", "", { "dependencies": { "cookie-es": "^3.1.1" }, "peerDependencies": { "react": ">=19.2.7", "react-dom": ">=19.2.7" }, "optionalPeers": ["react-dom"] }, "sha512-qyPMvW83jGIct3yiieisxdk9M745anqhpIMKN5m1t6yBMfgVPpt77aHOqs5fUlEJRMCGffg9BaQLH9oPVOL7xQ=="],
+
+    "reconnecting-websocket": ["reconnecting-websocket@4.4.0", "", {}, "sha512-D2E33ceRPga0NvTDhJmphEgJ7FUYF0v4lr1ki0csq06OdlxKfugGzN0dSkxM/NfqCxYELK4KcaTOUOjTV6Dcng=="],
 
     "regex": ["regex@6.1.0", "", { "dependencies": { "regex-utilities": "^2.3.0" } }, "sha512-6VwtthbV4o/7+OaAF9I5L5V3llLEsoPyq9P1JVXkedTP33c7MfCG0/5NOPcSJn0TzXcG9YUrR0gQSWioew3LDg=="],
 

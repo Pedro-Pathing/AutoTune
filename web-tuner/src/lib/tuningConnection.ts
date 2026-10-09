@@ -1,10 +1,11 @@
+import ReconnectingWebSocket from "reconnecting-websocket";
 import { serverMessageSchema, type ServerMessage } from "./schemas";
 
 export type ConnectionFailure = { message: string };
 export type TunerMessage = Exclude<ServerMessage, { type: "error" | "init" }>;
 
 export class TuningConnection {
-    private readonly socket: WebSocket;
+    private readonly socket: ReconnectingWebSocket;
     private ended = false;
     private deadlineId: number | null = null;
 
@@ -14,7 +15,13 @@ export class TuningConnection {
         private readonly onFailure: (failure: ConnectionFailure) => void,
         private readonly setTunerName: (name: string) => void
     ) {
-        this.socket = new WebSocket(`ws://${window.location.hostname}:12649`);
+        this.socket = new ReconnectingWebSocket(`ws://${window.location.hostname}:12649`, [], {
+            connectionTimeout: 500,
+            minReconnectionDelay: 500,
+            maxReconnectionDelay: 500,
+            maxRetries: 2,
+            minUptime: 500
+        });
         this.socket.onopen = () => {
             this.clearDeadline();
             if (this.send({ type: "init", id })) {

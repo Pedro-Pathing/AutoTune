@@ -21,6 +21,7 @@
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
         "react-router": "^8.3.0",
+        "reconnecting-websocket": "^4.4.0",
         "shiki": "^4.4.3",
         "zod": "^4.4.3"
     },

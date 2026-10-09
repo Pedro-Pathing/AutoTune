@@ -42,7 +42,7 @@ dependencies {
     compileOnly("org.firstinspires.ftc:FtcCommon:11.2.1")
     compileOnly("org.firstinspires.ftc:RobotServer:11.2.1")
     dokkaPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:2.2.0")
-    implementation("com.pedropathing:revhub:3.0.0")
+    implementation("com.pedropathing:revhub:3.0.1")
     implementation("dev.frozenmilk.sinister:Sloth:0.3.2")
     implementation("com.aventrix.jnanoid:jnanoid:2.0.0")
     implementation("org.nanohttpd:nanohttpd-websocket:2.3.1") {
